@@ -14,6 +14,7 @@ typedef struct {
     LSQ *handle;
 } LSQ_Iterator;
 
+/*
 LSQ_HandleT LSQ_CreateSequence(void);                                               //1
 void LSQ_DestroySequence(LSQ_HandleT handle);                                       //2
 LSQ_IntegerIndexT LSQ_GetSize(LSQ_HandleT handle);                                  //3
@@ -35,6 +36,7 @@ void LSQ_InsertElementBeforeGiven(LSQ_IteratorT iterator, LSQ_BaseTypeT newEleme
 void LSQ_DeleteFrontElement(LSQ_HandleT handle);                                    //19
 void LSQ_DeleteRearElement(LSQ_HandleT handle);                                     //20
 void LSQ_DeleteGivenElement(LSQ_IteratorT iterator);                                //21
+ */
 
 LSQ_HandleT LSQ_CreateSequence(void) {
 
@@ -56,11 +58,7 @@ void LSQ_DestroySequence(LSQ_HandleT handle) {
 
 LSQ_IntegerIndexT LSQ_GetSize(LSQ_HandleT handle) {
 
-    if (handle != LSQ_HandleInvalid) {
-        return (ToLsq(handle))->size;
-    } else {
-        return 0;
-    }
+    return (handle != LSQ_HandleInvalid ? (ToLsq(handle))->size : 0);
 }
 
 int LSQ_IsIteratorDereferencable(LSQ_IteratorT iterator) {
