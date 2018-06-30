@@ -44,7 +44,7 @@ LSQ_HandleT LSQ_CreateSequence(void) {
     seq->head = NULL;
     seq->size = 0;
 
-    return 0;
+    return ((LSQ_HandleT)seq);
 }
 
 void LSQ_DestroySequence(LSQ_HandleT handle) {
