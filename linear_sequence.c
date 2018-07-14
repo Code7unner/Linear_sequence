@@ -9,7 +9,7 @@
 typedef struct {
     LSQ_BaseTypeT *head;
     LSQ_IntegerIndexT size;
-    int RealSize, VirtualSize;
+    int realsize;
 } LSQ, *LSQ_Container;
 
 typedef struct {
@@ -45,7 +45,7 @@ LSQ_HandleT LSQ_CreateSequence(void) {
 
     LSQ_Container seq = (LSQ_Container*)malloc(sizeof(LSQ));
 
-    if (seq == LSQ_HandleInvalid) 
+    if (seq == LSQ_HandleInvalid)
         return LSQ_HandleInvalid;
 
     seq->head = (LSQ_BaseTypeT*)malloc(StartContainerSize * sizeof(LSQ_BaseTypeT));
@@ -56,11 +56,7 @@ LSQ_HandleT LSQ_CreateSequence(void) {
     }
 
     seq->size = 0;
-    seq->RealSize = StartContainerSize;
-    
-    // LSQ *seq = malloc(sizeof(LSQ));
-    // seq->head = NULL;
-    // seq->size = 0;
+    seq->realsize = StartContainerSize;
 
     return ((LSQ_HandleT)seq);
 }
@@ -76,19 +72,19 @@ void LSQ_DestroySequence(LSQ_HandleT handle) {
 
 LSQ_IntegerIndexT LSQ_GetSize(LSQ_HandleT handle) {
 
-    return (handle != LSQ_HandleInvalid ? (ToLsq(handle))->size : 0);
+    return (handle != LSQ_HandleInvalid ? (ToLsq(handle))->realsize : 0);
 }
 
 int LSQ_IsIteratorDereferencable(LSQ_IteratorT iterator) {
 
     return ((iterator != NULL) && (ToIterator(iterator)->i >= 0) &&
-            (ToIterator(iterator)->i < ToIterator(iterator)->handle->size));
+            (ToIterator(iterator)->i < ToIterator(iterator)->handle->realsize));
 }
 
 int LSQ_IsIteratorPastRear(LSQ_IteratorT iterator){
 
     return ((iterator != NULL) &&
-            (ToIterator(iterator)->i >= ToIterator(iterator)->handle->size));
+            (ToIterator(iterator)->i >= ToIterator(iterator)->handle->realsize));
 }
 
 int LSQ_IsIteratorBeforeFirst(LSQ_IteratorT iterator) {
@@ -108,6 +104,9 @@ LSQ_BaseTypeT* LSQ_DereferenceIterator(LSQ_IteratorT iterator) {
 LSQ_IteratorT LSQ_GetElementByIndex(LSQ_HandleT handle, LSQ_IntegerIndexT index) {
 
     if (handle == LSQ_HandleInvalid)
+        return (NULL);
+
+    if (index > (ToLsq(handle))->realsize - 1)
         return (NULL);
 
     LSQ_Iterator *iter = malloc(sizeof(LSQ_Iterator));
@@ -135,7 +134,7 @@ LSQ_IteratorT LSQ_GetPastRearElement(LSQ_HandleT handle) {
         return (LSQ_HandleInvalid);
 
     LSQ_Iterator *iter = malloc(sizeof(LSQ_Iterator));
-    iter->i = ToLsq(handle)->size;
+    iter->i = ToLsq(handle)->realsize - 1;
     iter->handle = ToLsq(handle);
 
     return ((LSQ_IteratorT)iter);
@@ -183,10 +182,17 @@ void LSQ_InsertFrontElement(LSQ_HandleT handle, LSQ_BaseTypeT element) {
     if (ToLsq(handle) == LSQ_HandleInvalid)
         return;
 
-    ToLsq(handle)->size++;
-    ToLsq(handle)->head = realloc(ToLsq(handle)->head, sizeof(LSQ_BaseTypeT) * ToLsq(handle)->size);
+    ToLsq(handle)->realsize++;
 
-    memmove(ToLsq(handle)->head + 1, ToLsq(handle)->head, sizeof(LSQ_BaseTypeT) * (ToLsq(handle)->size - 1));
+    if (ToLsq(handle)->size < ToLsq(handle)->realsize) {
+        if ((ToLsq(handle))->size == 0) {
+            (ToLsq(handle)->size) = 1;
+        }
+        ToLsq(handle)->head = realloc(ToLsq(handle)->head, sizeof(LSQ_BaseTypeT) * ToLsq(handle)->size * 2);
+        ToLsq(handle)->size*= 2;
+    }
+
+    memmove(ToLsq(handle)->head + 1, ToLsq(handle)->head, sizeof(LSQ_BaseTypeT) * (ToLsq(handle)->realsize - 1));
     *(ToLsq(handle)->head) = element;
 }
 
@@ -195,9 +201,17 @@ void LSQ_InsertRearElement(LSQ_HandleT handle, LSQ_BaseTypeT element) {
     if (ToLsq(handle) == LSQ_HandleInvalid)
         return;
 
-    ToLsq(handle)->size++;
-    ToLsq(handle)->head = realloc(ToLsq(handle)->head, sizeof(LSQ_BaseTypeT) * ToLsq(handle)->size);
-    *(ToLsq(handle)->head + ToLsq(handle)->size - 1) = element;
+    ToLsq(handle)->realsize++;
+
+    if (ToLsq(handle)->size < (ToLsq(handle)->realsize)) {
+        if ((ToLsq(handle))->size == 0) {
+            (ToLsq(handle)->size) = 1;
+        }
+        ToLsq(handle)->head = realloc(ToLsq(handle)->head, sizeof(LSQ_BaseTypeT) * ToLsq(handle)->size * 2);
+        ToLsq(handle)->size*= 2;
+    }
+
+    *(ToLsq(handle)->head + ToLsq(handle)->realsize - 1) = element;
 }
 
 void LSQ_InsertElementBeforeGiven(LSQ_IteratorT iterator, LSQ_BaseTypeT newElement) {
@@ -205,13 +219,18 @@ void LSQ_InsertElementBeforeGiven(LSQ_IteratorT iterator, LSQ_BaseTypeT newEleme
     if (ToIterator(iterator) == NULL)
         return;
 
-    ToIterator(iterator)->handle->size++;
-    ToIterator(iterator)->handle->head = realloc(ToIterator(iterator)->handle->head,
-                                                 sizeof(LSQ_BaseTypeT)*ToIterator(iterator)->handle->size);
+    ToIterator(iterator)->handle->realsize++;
+
+    if (ToIterator(iterator)->handle->realsize > ToIterator(iterator)->handle->size) {
+
+        ToIterator(iterator)->handle->head = realloc(ToIterator(iterator)->handle->head,
+                                                 sizeof(LSQ_BaseTypeT)*ToIterator(iterator)->handle->size * 2);
+        ToIterator(iterator)->handle->size * 2;
+    }
 
     memmove(ToIterator(iterator)->handle->head + ToIterator(iterator)->i + 1,
             ToIterator(iterator)->handle->head + ToIterator(iterator)->i,
-            sizeof(LSQ_BaseTypeT) * (ToIterator(iterator)->handle->size - ToIterator(iterator)->i - 1));
+            sizeof(LSQ_BaseTypeT) * (ToIterator(iterator)->handle->realsize - ToIterator(iterator)->i - 1));
     (*(ToIterator(iterator)->handle->head + ToIterator(iterator)->i)) = newElement;
 }
 
@@ -223,7 +242,7 @@ void LSQ_DeleteFrontElement(LSQ_HandleT handle) {
     if (ToLsq(handle)->size == 0)
         return;
 
-    ToLsq(handle)->size--;
+    ToLsq(handle)->realsize--;
     ToLsq(handle)->head++;
 }
 
@@ -235,7 +254,7 @@ void LSQ_DeleteRearElement(LSQ_HandleT handle) {
     if (ToLsq(handle)->size == 0)
         return;
 
-    ToLsq(handle)->size--;
+    ToLsq(handle)->realsize--;
 }
 
 void LSQ_DeleteGivenElement(LSQ_IteratorT iterator) {
@@ -243,10 +262,9 @@ void LSQ_DeleteGivenElement(LSQ_IteratorT iterator) {
     if ((ToIterator(iterator) == NULL) || (!LSQ_IsIteratorDereferencable(iterator)))
         return;
 
-    ToIterator(iterator)->handle->size--;
+    ToIterator(iterator)->handle->realsize--;
+
     memmove(ToIterator(iterator)->handle->head + ToIterator(iterator)->i,
             ToIterator(iterator)->handle->head + ToIterator(iterator)->i + 1,
-            sizeof(LSQ_BaseTypeT) * (ToIterator(iterator)->handle->size - ToIterator(iterator)->i));
-    ToIterator(iterator)->handle->head = realloc(ToIterator(iterator)->handle->head,
-                                                 sizeof(LSQ_BaseTypeT) * (ToIterator(iterator)->handle->size));
+            sizeof(LSQ_BaseTypeT) * (ToIterator(iterator)->handle->realsize - ToIterator(iterator)->i));
 }
